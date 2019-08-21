@@ -24,10 +24,8 @@ class LAPPDParseACC: public Tool {
 
  private:
    ifstream dfs, mfs;
-   vector<int> boards;
    string meta_header;
-   int n_cells;
-   int n_chs;
+   int _event_no;
 
 
 

@@ -1,4 +1,5 @@
 #include "LAPPDParseACC.h"
+#include "Geometry.h"
 
 LAPPDParseACC::LAPPDParseACC():Tool(){}
 
@@ -16,162 +17,101 @@ bool LAPPDParseACC::Initialise(std::string configfile, DataModel &data){
   m_data= &data; //assigning transient data pointer
   /////////////////////////////////////////////////////////////////
 
-  int annieeventexists = m_data->Stores.count("ANNIEEvent");
-  if(annieeventexists==0) m_data->Stores["ANNIEEvent"] = new BoostStore(false,2);
-
-  bool isSim = false;
-  bool isLoaded = false;
-  m_data->Stores["ANNIEEvent"]->Header->Set("isSim",isSim);
-  m_data->Stores["ANNIEEvent"]->Set("isLoaded",isLoaded); //are all events loaded into the store? 
-
-
-
-
-
-
-  /* Get Pedestal Data */
+  //datafilename
   string path;
-  m_variables.Get("filepath", path);
+  m_variables.Get("lappd_data_filepath", path); // does not have a "/" at the end
   string name;
-  m_variables.Get("filename", name);
+  m_variables.Get("lappd_data_filename", name); // does not have a suffix ".acdc" 
   string filebase = path + "/" + name;
 
-  string pedpath = filebase + ".ped";
-  ifstream pfs;
-  cout << "Trying to load ped file from " << filebase << endl;
-  try {
-    pfs.open(pedpath.c_str());
-  } catch (...) {
-    cout << "Could not load pedestal data file." << endl;
-    return false;
-  }
 
-  /* Determine Number of boards */
-  int board;
-  string line;
-  getline(pfs, line); //skip header
-  while(!pfs.eof()){
-    pfs >> board;
-    getline(pfs, line);
-    // If the vector does not contain the board entry
-    if(find(boards.begin(), boards.end(), board) == boards.end()) {
-      boards.push_back(board);
-      cout << "Found board " << board << endl;
-    }
-  }
-  pfs.close();
-  pfs.open(pedpath.c_str());
-
-  map<int, map<int, Waveform<int>>> rawPedData;
-
-  // Skip header
-  getline(pfs, line);
-
-  int b, c;
-  int key;
-  int sample;
-  vector<int> samples;
-  while(!pfs.eof()){
-    pfs >> b;
-    pfs >> c;
-    for (int i = 0; i < n_cells; i++) {
-      pfs >> sample;
-      samples.push_back(sample);
-
-    }
-    Waveform<int> data;
-    data.SetSamples(samples);
-    rawPedData[b][c] = data;
-  }
-  pfs.close();
-
-  m_data->Stores["ANNIEEvent"]->Set("rawPedData", rawPedData);
-  /* Open other file streams */
-
+  //open the ACDC filestream
+  string line; //dummy line variable
   string datapath = filebase + ".acdc";
-  try {
-      dfs.open(datapath.c_str());
-  } catch (...) {
+  dfs.open(datapath.c_str());
+  if(!dfs.is_open())
+  {
     cout << "Could not load acdc data file." << endl;
     return false;
   }
   //process the header already
   getline(dfs, line);
 
+  //open metadata filestream
   string metapath = filebase + ".meta";
-  try {
-      mfs.open(metapath.c_str());
-  } catch (...) {
+  mfs.open(metapath.c_str());
+  if(!mfs.is_open())
+  {
     cout << "Could not load acdc data file." << endl;
     return false;
   }
   //process the header already
   getline(mfs, meta_header);
 
-
-  //Open a calibration file that contains
-  //info about PSEC4 electronics; for example:
-  //actual sample times based on aperture jitter calibration
-  //and time-lengths of striplines given an MCP pulse; for each 
-  //board 
-  
-
-  string calfilename;
-  m_variables.Get("calibfile", calfilename);
-  filebase = path + "/" + calfilename;
-  ifstream calfs;
-
-  cout << "Trying to load psec4 calibraiton file from " << filebase << endl;
-  try {
-    calfs.open(filebase.c_str());
-  } catch (...) {
-    cout << "Could not load psec4 calibration file." << endl;
-    return false;
-  }
-
-  
-  //structure: caldata[board]["cal info"] = vector of floats
-  map<int, map<string, vector<float>>> caldata;
-  vector<float> tempdata;
-  string string_key;
-  float temp_bit;
-  while(getline(calfs, line))
-  {
-    istringstream iss(line);
-    iss>>string_key; //first column always the key 
-    iss>>board; //second column always the board
-    while(iss >> temp_bit)
-    {
-      tempdata.push_back(temp_bit);
-    }
-    caldata[board][string_key] = tempdata;
-    tempdata.clear();
-  }
-
-  m_data->Stores["ANNIEEvent"]->Set("psec4caldata", caldata);
-
-  //define the number of samples and number
-  //of channels based on this calibration data
-  n_cells = caldata[boards.at(0)]["sampletimes"].size();
-  n_chs = caldata[boards.at(0)]["striptimes"].size();
-  m_data->Stores["ANNIEEvent"]->Set("num_chs", n_chs);
-  m_data->Stores["ANNIEEvent"]->Set("num_cells", n_cells);
-
   return true;
 }
 
 
-//By default loads in all of the data in the entire data file. 
-//If Toolchain is doing a loop, it checks to see if the data is 
-//already in the datastore. 
 bool LAPPDParseACC::Execute(){
-  //check if the data has already been loaded. 
-  //if not, continue and load the entire data file into the store
-  bool isLoaded;
 
-  m_data->Stores["ANNIEEvent"]->Get("isLoaded", isLoaded);
-  if(isLoaded==true) return true; // dont load again, just go to the next usertool
 
+  //find the geometry based on a string
+  //given by the config file
+  string geoname;
+  m_variables.Get("geometry_name", geoname);
+  string storename; 
+  m_variables.Get("store_name", storename);
+  bool geomfound;
+  Geometry* geom;
+  geomfound = m_data->Stores.at(storename)->Header->Get(geoname,geom);
+  if(!geomfound)
+  {
+    cout << "Geometry " << geoname << " in store " << storename << " was not found while attempting to prase ACDC data" << endl;
+    return false;
+  }
+
+  //isolate the LAPPDs and their channel lists
+  //so that when we parse an event in the data file, 
+  //we look for that board/channel and re-key the data
+  //stream to match the geometry channel keys. 
+  map<unsigned long, Channel>* all_lappd_channels; 
+  map<string, map<unsigned long,Detector*> >* AllDetectors = geom->GetDetectors();
+  map<string, map<unsigned long,Detector*> >::iterator itGeom;
+  for(itGeom = AllDetectors->begin(); itGeom != AllDetectors->end(); ++itGeom)
+  {
+    if(itGeom->first == "LAPPD")
+    {
+      map<unsigned long,Detector*> LAPPDDetectors = itGeom->second;
+      map<unsigned long, Detector*>::iterator itDet;
+      for(itDet = LAPPDDetectors.begin(); itDet != LAPPDDetectors.end(); ++itDet)
+      {
+        //here are the channel objects for this particular LAPPD
+        map<unsigned long, Channel>* lappdchannels = itDet->second->GetChannels();
+        //now loop through and insert into the all_lappd_channels 
+        //map to make a cumulative map of all channels
+        map<unsigned long, Channel>::iterator itCh;
+        for(itCh = lappdchannels->begin(); itCh != lappdchannels->end(); ++itCh)
+        {
+          all_lappd_channels->insert(pair<unsigned long, Channel>(itCh->first, itCh->second));
+        }
+      }
+    }
+  }
+
+
+  //print to test
+
+  map<unsigned long, Channel>::iterator itCh;
+  for(itCh = all_lappd_channels->begin(); itCh != all_lappd_channels->end(); ++itCh)
+  {
+    Channel thech = itCh->second;
+    unsigned long k = itCh->first;
+    cout << "Board " << thech.GetSignalCard() << " channel " << thech.GetSignalChannel() << " has key " << k << " and channel id " << thech.GetChannelID() << " strip num " << thech.GetStripNum() << " on side " << thech.GetStripSide() << endl;
+  }
+
+
+
+  /*
 
   //structure: 
   //rawData[event][board][channel] = Waveform<double> 
@@ -241,7 +181,7 @@ bool LAPPDParseACC::Execute(){
   
 
 
-  /* Metadata */
+  //Metadata 
   //structure metadata[event][board]["key string"] = unsigned int 
 
   map<int, map<int, map<string, unsigned int>>> metadata;
@@ -288,7 +228,7 @@ bool LAPPDParseACC::Execute(){
 
   isLoaded = true;
   m_data->Stores["ANNIEEvent"]->Set("isLoaded", isLoaded); //have loaded the entire data file
-
+  */
   return true;
 }
 

@@ -4,7 +4,7 @@
 
 #include <SerialisableObject.h>
 
-enum class channelstatus : uint8_t { OFF, ON, UNSTABLE };
+enum class channelstatus : uint8_t { OFF, ON, UNSTABLE, SYNC };
 
 class Channel : public SerialisableObject{
 	
@@ -68,6 +68,7 @@ class Channel : public SerialisableObject{
 			case (channelstatus::OFF): std::cout<<"OFF"<<std::endl; break;
 			case (channelstatus::ON): std::cout<<"ON"<<std::endl; break;
 			case (channelstatus::UNSTABLE) : std::cout<<"UNSTABLE"<<std::endl; break;
+			case (channelstatus::SYNC) : std::cout << "SYNC" << std::endl; break;
 		}
 		return true;
 	}

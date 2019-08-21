@@ -92,3 +92,6 @@
 #include "MonitorMRDEventDisplay.h"
 #include "LoadGeometry.h"
 #include "WaveformNNLS.h"
+#include "FTBFAnalysis.h"
+#include "LoadFTBFgeometry.h"
+#include "LAPPDCalibrationWriter.h"
