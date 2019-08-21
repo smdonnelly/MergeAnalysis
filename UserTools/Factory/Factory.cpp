@@ -87,5 +87,11 @@ if (tool=="LoadGeometry") ret=new LoadGeometry;
 if (tool=="LoadFTBFgeometry") ret=new LoadFTBFgeometry;
 if (tool=="LAPPDCalibrationWriter") ret=new LAPPDCalibrationWriter;
 if (tool=="FTBFAnalysis") ret=new FTBFAnalysis;
+if (tool=="TimeClustering") ret=new TimeClustering;
+if (tool=="GracefulStop") ret=new GracefulStop;
+if (tool=="PhaseIIADCHitFinder") ret=new PhaseIIADCHitFinder;
+if (tool=="TrackCombiner") ret=new TrackCombiner;
+if (tool=="SimulatedWaveformDemo") ret=new SimulatedWaveformDemo;
+
 return ret;
 }

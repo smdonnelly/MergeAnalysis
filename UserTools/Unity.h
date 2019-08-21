@@ -95,3 +95,8 @@
 #include "FTBFAnalysis.h"
 #include "LoadFTBFgeometry.h"
 #include "LAPPDCalibrationWriter.h"
+#include "TimeClustering.h"
+#include "GracefulStop.h"
+#include "PhaseIIADCHitFinder.h"
+#include "TrackCombiner.h"
+#include "SimulatedWaveformDemo.h"
