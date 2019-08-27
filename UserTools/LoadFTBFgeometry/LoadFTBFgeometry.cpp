@@ -191,7 +191,7 @@ bool LoadFTBFgeometry::Execute(){
 			int ACC_Card_Num = 0; //for all, only used one ACC
 			int ACC_Crate_Num = 0; //only one crate
 			int ACDC_Card_Num = (int)acdc_calib_reader.GetBoardID();
-			int ACC_Chan_Num = ACDC_Card_Num; //this is damn redundance, so I may be misunderstanding something
+			int ACC_Chan_Num = (int)acdc_calib_reader.GetBoardID();; //this is damn redundance, so I may be misunderstanding something
 			int ACDC_Crate_Num = 0; //don't really know what this represents
 			int ACDC_Chan_Num = acdc_calib_reader.GetChannelID(); //references the acdc data file
 			int LAPPD_HV_Crate_Num = 0; // all comes from the same crate

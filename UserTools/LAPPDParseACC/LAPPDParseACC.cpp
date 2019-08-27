@@ -1,6 +1,7 @@
 #include "LAPPDParseACC.h"
 #include "Geometry.h"
 
+
 LAPPDParseACC::LAPPDParseACC():Tool(){}
 
 using namespace std;
@@ -24,11 +25,11 @@ bool LAPPDParseACC::Initialise(std::string configfile, DataModel &data){
   m_variables.Get("lappd_data_filename", name); // does not have a suffix ".acdc" 
   string filebase = path + "/" + name;
 
-
   //open the ACDC filestream
   string line; //dummy line variable
   string datapath = filebase + ".acdc";
   dfs.open(datapath.c_str());
+
   if(!dfs.is_open())
   {
     cout << "Could not load acdc data file." << endl;
@@ -36,6 +37,10 @@ bool LAPPDParseACC::Initialise(std::string configfile, DataModel &data){
   }
   //process the header already
   getline(dfs, line);
+
+  data_stream_pos = dfs.tellg();
+  
+
 
   //open metadata filestream
   string metapath = filebase + ".meta";
@@ -48,12 +53,23 @@ bool LAPPDParseACC::Initialise(std::string configfile, DataModel &data){
   //process the header already
   getline(mfs, meta_header);
 
+
+  //event number handling. create event 0
+  //at initialization stage (here)
+  _event_no = -1;
+
   return true;
 }
 
 
 bool LAPPDParseACC::Execute(){
 
+  
+  //this tool loads one event into the store. 
+  //get the event number from the last loaded event
+  //and make sure to compare while parsing the
+  //raw ACDC files. 
+  _event_no++;
 
   //find the geometry based on a string
   //given by the config file
@@ -70,68 +86,55 @@ bool LAPPDParseACC::Execute(){
     return false;
   }
 
+
   //isolate the LAPPDs and their channel lists
   //so that when we parse an event in the data file, 
   //we look for that board/channel and re-key the data
   //stream to match the geometry channel keys. 
-  map<unsigned long, Channel>* all_lappd_channels; 
-  map<string, map<unsigned long,Detector*> >* AllDetectors = geom->GetDetectors();
-  map<string, map<unsigned long,Detector*> >::iterator itGeom;
-  for(itGeom = AllDetectors->begin(); itGeom != AllDetectors->end(); ++itGeom)
-  {
-    if(itGeom->first == "LAPPD")
-    {
-      map<unsigned long,Detector*> LAPPDDetectors = itGeom->second;
-      map<unsigned long, Detector*>::iterator itDet;
-      for(itDet = LAPPDDetectors.begin(); itDet != LAPPDDetectors.end(); ++itDet)
-      {
-        //here are the channel objects for this particular LAPPD
-        map<unsigned long, Channel>* lappdchannels = itDet->second->GetChannels();
-        //now loop through and insert into the all_lappd_channels 
-        //map to make a cumulative map of all channels
-        map<unsigned long, Channel>::iterator itCh;
-        for(itCh = lappdchannels->begin(); itCh != lappdchannels->end(); ++itCh)
-        {
-          all_lappd_channels->insert(pair<unsigned long, Channel>(itCh->first, itCh->second));
-        }
-      }
-    }
-  }
+  map<unsigned long, Channel>* all_lappd_channels = new map<unsigned long, Channel>; 
+  GetAllLAPPDChannels(geom, all_lappd_channels);
+  
 
 
-  //print to test
-
-  map<unsigned long, Channel>::iterator itCh;
-  for(itCh = all_lappd_channels->begin(); itCh != all_lappd_channels->end(); ++itCh)
-  {
-    Channel thech = itCh->second;
-    unsigned long k = itCh->first;
-    cout << "Board " << thech.GetSignalCard() << " channel " << thech.GetSignalChannel() << " has key " << k << " and channel id " << thech.GetChannelID() << " strip num " << thech.GetStripNum() << " on side " << thech.GetStripSide() << endl;
-  }
+  //create raw lappd data structure
+  map<unsigned long, Waveform<double>>* LAPPDWaveforms = new map<unsigned long, Waveform<double>>;
 
 
-
-  /*
-
-  //structure: 
-  //rawData[event][board][channel] = Waveform<double> 
-  map<int, map<int, map<int, Waveform<double>>>> rawData;
-
-
-
-  int event, board, channel;
-  string line;
+  int bo = 0, ch = 0; //event board and channel parsing vars
+  int ev = _event_no;
+  string line; //temp parsing var
   int line_counter = 0;
-  double adccounts_to_mv = 1.2*1000.0/4096.0;
+  //key of a certain channel from geometry 
+  //associated with the presently parsed channel
+  unsigned long geom_key = 0; 
+  bool keyfound = false;
+
+  //if you want better precision, take in calibration
+  //data, either the ACDC makeLUT table or an output
+  //from Whitmer's calibration code
+  double adccounts_to_mv = 1.2*1000.0/4096.0; //mv
 
   //start of this loop is just after
   //the header of the datafile
   Waveform<double> tempwav;
+
+
+  //in ensuring the data is parsed
+  //event by event, we store the start
+  //position of the event from the filestream.
+  //put the dfs curser at the first line of this event
+  dfs.seekg(data_stream_pos); 
+
   while(getline(dfs, line))
   {
     istringstream iss(line); //the current line in the file
     int temp_bit; //the current integer/bit in the line
     int char_count = -1; //counts the present integer/bit number in the line
+
+    //testing
+    cout << "think i'm on event " << _event_no << endl;
+    cout << line << endl;
+
 
     //top of this loop is the start of the line
     //in the data file. 
@@ -142,44 +145,56 @@ bool LAPPDParseACC::Execute(){
       //if we are on the event number
       if(char_count == 0)
       {
-        event = temp_bit;
+        ev = temp_bit;
         continue;
       }
       if(char_count == 1)
       {
         //this is the board number
         //not implemented yet
-        board = temp_bit;
+        bo = temp_bit;
         continue;
       }
       if(char_count == 2)
       {
         //this is the channel number
-        channel = temp_bit;
+        ch = temp_bit;
         continue;
       }
+      
       //if none of the above if statements fire
       //then we are in a sample (0 - 255) of ADC counts
       tempwav.PushSample(temp_bit*adccounts_to_mv);
     }
 
-    //check to make sure the size of the tempwav is correct
-    int tempsize = tempwav.GetSamples()->size();
-    if(tempsize != n_cells)
-    {
-      cout << "Warning, event " << event << " board " \
-      << board << " channel " << channel << \
-      " has the incorrect number of samples: " << tempsize << endl;
-    }
-    //push to data, reinitialize
-    rawData[event][board][channel] = tempwav;
+    //if this is no longer the event we want, 
+    //then break out of the loop. if it is still
+    //on the event, save this ifstream position
+    if(ev == _event_no) data_stream_pos = dfs.tellg();
+    else break;
+
+    //find the unique channel key for this
+    //board/channel combination given a 
+    //geometry class. uses geom_key as a reference
+    keyfound = FindChannelKeyFromACDCFile(bo, ch, geom_key, all_lappd_channels);
+    //if the channel/board combo is not in the 
+    //list of lappd channels in the geometry class,
+    //move to the next channel. 
+    if(!keyfound) continue;
+
+    cout << "found channel key " << geom_key << ", adding to waveform map" << endl;
+    //otherwise, add this waveform to the raw lappd waveform
+    //structure. 
+    LAPPDWaveforms->insert(pair<unsigned int, Waveform<double>>(geom_key, tempwav));
+
+    //reinitialize
     tempwav.ClearSamples();
     line_counter++;
   }
 
-  m_data->Stores["ANNIEEvent"]->Set("RawLAPPDData_ftbf", rawData);
+  m_data->Stores.at(storename)->Set("LAPPDWaveforms", LAPPDWaveforms);
   
-
+  /*
 
   //Metadata 
   //structure metadata[event][board]["key string"] = unsigned int 
@@ -229,9 +244,78 @@ bool LAPPDParseACC::Execute(){
   isLoaded = true;
   m_data->Stores["ANNIEEvent"]->Set("isLoaded", isLoaded); //have loaded the entire data file
   */
+
   return true;
 }
 
+//function takes in a board and ch number from
+//an ACDC data file and loads a unique channel
+//key number found in a map of channels taken 
+//from a detector geometry in the Execute function.
+//returns 0 if the channel is not found, 1 if the channel is found.
+bool LAPPDParseACC::FindChannelKeyFromACDCFile(int acdc_board, int acdc_ch, unsigned long& key, map<unsigned long, Channel>* lappd_channels_from_geom)
+{
+
+  //the channel number and board number
+  //from the detector class, loaded in the
+  //geometry loading tool. 
+  unsigned int det_board, det_ch;
+
+  //loop through to find the matching
+  //board and ch number. This can seriously
+  //be optimized; write a search function to
+  //make faster. 
+  map<unsigned long, Channel>::iterator itCh;
+  for(itCh = lappd_channels_from_geom->begin(); itCh != lappd_channels_from_geom->end(); ++itCh)
+  {
+    Channel thech = itCh->second;
+    unsigned long k = itCh->first;
+    det_board = thech.GetSignalCard();
+    det_ch = thech.GetSignalChannel();
+    //this is the golden find, return if found. 
+    if(det_board == acdc_board and det_ch == acdc_ch)
+    {
+      //change the key pointer to match the found channel
+      key = k;
+      return true;
+    }
+  }
+
+  //if it never returns, then it doesnt exist in the geometry
+  //leave the key reference unaltered.
+  return false;
+}
+
+
+//isolate the LAPPDs and their channel lists
+//so that when we parse an event in the data file, 
+//we look for that board/channel and re-key the data
+//stream to match the geometry channel keys. 
+void LAPPDParseACC::GetAllLAPPDChannels(Geometry* geom, map<unsigned long, Channel>* all_lappd_channels)
+{
+  map<string, map<unsigned long,Detector*> >* AllDetectors = geom->GetDetectors();
+  map<string, map<unsigned long,Detector*> >::iterator itGeom;
+  for(itGeom = AllDetectors->begin(); itGeom != AllDetectors->end(); ++itGeom)
+  {
+    if(itGeom->first == "LAPPD")
+    {
+      map<unsigned long,Detector*> LAPPDDetectors = itGeom->second;
+      map<unsigned long, Detector*>::iterator itDet;
+      for(itDet = LAPPDDetectors.begin(); itDet != LAPPDDetectors.end(); ++itDet)
+      {
+        //here are the channel objects for this particular LAPPD
+        map<unsigned long, Channel>* lappdchannels = itDet->second->GetChannels();
+        //now loop through and insert into the all_lappd_channels 
+        //map to make a cumulative map of all channels
+        map<unsigned long, Channel>::iterator itCh;
+        for(itCh = lappdchannels->begin(); itCh != lappdchannels->end(); ++itCh)
+        {
+          all_lappd_channels->insert(pair<unsigned long, Channel>(itCh->first, itCh->second));
+        }
+      }
+    }
+  }
+}
 
 bool LAPPDParseACC::Finalise(){
   dfs.close();
