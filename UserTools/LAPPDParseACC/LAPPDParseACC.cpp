@@ -131,11 +131,6 @@ bool LAPPDParseACC::Execute(){
     int temp_bit; //the current integer/bit in the line
     int char_count = -1; //counts the present integer/bit number in the line
 
-    //testing
-    cout << "think i'm on event " << _event_no << endl;
-    cout << line << endl;
-
-
     //top of this loop is the start of the line
     //in the data file. 
     while(iss >> temp_bit)

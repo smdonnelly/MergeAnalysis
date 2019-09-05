@@ -62,6 +62,8 @@ public:
 
 	int GetEntries(){return _calibtree->GetEntries();}
 
+	void CloseRootFile();
+
 
 };
 

@@ -231,6 +231,7 @@ bool LoadFTBFgeometry::Execute(){
 		if(verbosity>4) ftbfgeom->PrintChannels();
 	}
 
+  	acdc_calib_reader.CloseRootFile();
 
   // for other WCSim tools that may need the WCSim Tube IDs
 	m_data->Stores.at("FTBFEvent")->Header->Set("lappd_tubeid_to_detectorkey",lappd_tubeid_to_detectorkey);

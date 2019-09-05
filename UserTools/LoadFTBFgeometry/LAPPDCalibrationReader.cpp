@@ -27,10 +27,20 @@ LAPPDCalibrationReader::LAPPDCalibrationReader(TString calibfilename)
 
 }
 
+void LAPPDCalibrationReader::CloseRootFile()
+{
+	if(_tf != nullptr)
+	{
+		_tf->Close();
+		delete _tf;
+		_tf = nullptr;
+	}
+
+	return;
+	
+}
 
 LAPPDCalibrationReader::~LAPPDCalibrationReader()
 {
-	_tf->Close();
-	delete _tf;
-	_tf = nullptr;
+	CloseRootFile();
 }
