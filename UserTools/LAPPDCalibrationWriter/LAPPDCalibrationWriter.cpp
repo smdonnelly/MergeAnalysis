@@ -39,7 +39,6 @@ bool LAPPDCalibrationWriter::Initialise(std::string configfile, DataModel &data)
 
 bool LAPPDCalibrationWriter::Execute(){
 
-	
 	//only run this tool once
 	_event_iter++;
 	if(_event_iter != 0) return true;
@@ -48,7 +47,7 @@ bool LAPPDCalibrationWriter::Execute(){
 	//DefaultSimple();
 	FTBFPionRun();
 	TFile* _calibrootfile = new TFile(_calibfilename,"RECREATE");
-
+	_calibrootfile->cd();
 	_calibtree->Write();
 	_calibrootfile->Close();
 	delete _calibrootfile;

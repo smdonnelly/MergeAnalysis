@@ -38,7 +38,6 @@ bool LoadFTBFgeometry::Initialise(std::string configfile, DataModel &data){
 
 bool LoadFTBFgeometry::Execute(){
 
-	
 
 	//variable names similar to annie geom for 
 	//comparison. basically want to construct
@@ -103,7 +102,7 @@ bool LoadFTBFgeometry::Execute(){
 	// Construct the Detectors and Channels
 	// ====================================
 	LAPPDCalibrationReader acdc_calib_reader(calibfilename);
-	
+	map<unsigned long, vector<double>>* sample_time_map = new map<unsigned long, vector<double>>;
 	// lappds
 	for(int lappdi=0; lappdi<numlappds; lappdi++){
 		
@@ -223,6 +222,10 @@ bool LoadFTBFgeometry::Execute(){
 			// Add this channel to the geometry
 			if(verbosity>4) cout<<"Adding channel "<<uniquechannelkey<<" to detector "<<uniquedetectorkey<<endl;
 			adet.AddChannel(lappdchannel);
+
+
+			sample_time_map->insert(pair<unsigned long, vector<double>>(uniquechannelkey, acdc_calib_reader.GetSampleTimes()));
+
 		}
 		if(verbosity>4) cout<<"Adding detector "<<uniquedetectorkey<<" to geometry"<<endl;
 		// Add this detector to the geometry
@@ -237,6 +240,7 @@ bool LoadFTBFgeometry::Execute(){
 	m_data->Stores.at("FTBFEvent")->Header->Set("lappd_tubeid_to_detectorkey",lappd_tubeid_to_detectorkey);
 	// inverse
 	m_data->Stores.at("FTBFEvent")->Header->Set("detectorkey_to_lappdid",detectorkey_to_lappdid);
+	m_data->Stores.at("FTBFEvent")->Set("sample_time_map", sample_time_map);
 
 	
   return true;

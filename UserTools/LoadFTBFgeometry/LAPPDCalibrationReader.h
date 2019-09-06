@@ -44,7 +44,7 @@ public:
 	LAPPDCalibrationReader(TString calibfilename);
 	~LAPPDCalibrationReader();
 
-	void LoadEntry(int e){_calibtree->GetEntry(e);} 
+	void LoadEntry(int e);
 
 	bool GetSingleEnded(){return _single_ended;}
 	bool GetIgnoreChannel(){return _ignore_channel;}

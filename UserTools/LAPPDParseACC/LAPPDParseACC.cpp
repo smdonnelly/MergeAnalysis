@@ -94,7 +94,7 @@ bool LAPPDParseACC::Execute(){
   map<unsigned long, Channel>* all_lappd_channels = new map<unsigned long, Channel>; 
   GetAllLAPPDChannels(geom, all_lappd_channels);
   
-
+  m_data->Stores.at(storename)->Set("AllLAPPDChannels", all_lappd_channels);
 
   //create raw lappd data structure
   map<unsigned long, Waveform<double>>* LAPPDWaveforms = new map<unsigned long, Waveform<double>>;

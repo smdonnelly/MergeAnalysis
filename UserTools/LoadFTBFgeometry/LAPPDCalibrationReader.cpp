@@ -6,6 +6,7 @@ LAPPDCalibrationReader::LAPPDCalibrationReader(TString calibfilename)
 {
 	_calibfilename = calibfilename;
 	 _tf = new TFile(_calibfilename, "READ");
+	 _tf->cd();
 	 _tf->GetObject("acdc_calib", _calibtree);
 	 
 
@@ -38,6 +39,11 @@ void LAPPDCalibrationReader::CloseRootFile()
 
 	return;
 	
+}
+
+void LAPPDCalibrationReader::LoadEntry(int e)
+{
+	_calibtree->GetEntry(e);
 }
 
 LAPPDCalibrationReader::~LAPPDCalibrationReader()
