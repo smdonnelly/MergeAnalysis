@@ -188,7 +188,10 @@ bool LAPPDParseACC::Execute(){
 
   m_data->Stores.at(storename)->Set("LAPPDWaveforms", LAPPDWaveforms);
   
-  /*
+  /* 
+
+  //Please keep the following comment, it currently does not work and 
+  //is not meant to work, but will help in writing the metadata parsing function
 
   //Metadata 
   //structure metadata[event][board]["key string"] = unsigned int 
