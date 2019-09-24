@@ -177,7 +177,6 @@ bool LAPPDParseACC::Execute(){
     //move to the next channel. 
     if(!keyfound) continue;
 
-    cout << "found channel key " << geom_key << ", adding to waveform map" << endl;
     //otherwise, add this waveform to the raw lappd waveform
     //structure. 
     LAPPDWaveforms->insert(pair<unsigned int, Waveform<double>>(geom_key, tempwav));

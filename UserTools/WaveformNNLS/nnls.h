@@ -46,6 +46,7 @@ private:
   nnlsvector* ax;                 // nnlsvector to hold A*x
   size_t* fset;               // fixed set 
   size_t fssize;              // sizeof fixed set
+  int verbosity=1;
 
   // The parameters of the solver
 private:
@@ -115,6 +116,7 @@ public:
   void  setPgTol(double pg){ pgtol = pg; }
   void  setMaxit(size_t m) { maxit = m;  }
   void  setSigma(double s) { sigma = s; }
+  void  setVerbosity(int verb) {verbosity = verb;}
 
   void  setData(nnlsmatrix* A, nnlsvector* b)  { this->A = A; this->b = b;}
 

@@ -22,14 +22,14 @@ class WaveformNNLS: public Tool {
   bool Execute();
   bool Finalise();
   void BuildTemplateMatrix(nnlsmatrix* A, Waveform<double> tempwave, size_t nrows); //makes the nnls matrix A given a root template file
-  void BuildWaveformVector(nnlsvector* b, Waveform<double> wave, vector<float> times, double template_timestep); //formats the waveform into the vector format expected by nnls algo
+  void BuildWaveformVector(nnlsvector* b, Waveform<double> wave, vector<double> times, double template_timestep); //formats the waveform into the vector format expected by nnls algo
   void SaveNNLSOutput(NnlsSolution* soln, nnlsmatrix* A, nnlsvector* x, vector<double> signaltimes);
 
 
 
  private:
 
-
+ 	int verbosity=1;
 
 
 

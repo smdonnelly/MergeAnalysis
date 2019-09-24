@@ -31,6 +31,9 @@ public:
 	inline int GetNumberOfComponents() {return component_times.size();} //how many components are populated in components vector
 	inline double GetComponentTime(int index) {return component_times.at(index);}
 	inline double GetComponentScale(int index) {return component_scales.at(index);}
+	inline Waveform<double>* GetFullSoln() {return &fullNnlsWaveform;}
+	inline Waveform<double>* GetTemplateWaveform() {return &templateWaveform;}
+	vector<double> GetFullSolutionTimes();
 
 	bool Print() {
 		int verbose=0;

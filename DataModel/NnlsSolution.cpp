@@ -29,3 +29,27 @@ void NnlsSolution::SetTemplate(Waveform<double> tmpwfm, vector<double> temptimes
 	templateWaveform.SetSamples(tmpwfm.Samples());
 	templateTimes = temptimes;
 }
+
+
+//assumes that the full solution is a constant timestep
+//timing based on the timestep of the template. 
+//Returns a vector representing the sample times of
+//the full solution waveform (len of full soln = len of returned vector)
+vector<double> NnlsSolution::GetFullSolutionTimes()
+{
+	vector<double> fullwfm_times;
+	if(templateTimes.empty())
+	{
+		cerr << "cannot get template times from NnlsSolution object. No template saved" << endl;
+		return fullwfm_times;
+	}
+
+	double template_timestep = templateTimes.at(1) - templateTimes.at(0);
+
+	for(int i = 0; i < (int)fullNnlsWaveform.GetSamples()->size(); i++)
+	{
+		fullwfm_times.push_back(i*template_timestep);
+	}
+
+	return fullwfm_times;
+}

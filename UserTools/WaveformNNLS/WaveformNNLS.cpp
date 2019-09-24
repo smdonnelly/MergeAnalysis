@@ -45,6 +45,7 @@ bool WaveformNNLS::Initialise(std::string configfile, DataModel &data){
 
   m_data= &data; //assigning transient data pointer
   /////////////////////////////////////////////////////////////////
+  m_variables.Get("verbose", verbosity);
 
   return true;
 }
@@ -58,8 +59,11 @@ bool WaveformNNLS::Execute(){
 	string RawDataName;
 	m_variables.Get("rawdataname", RawDataName);
 
-	map<int,vector<Waveform<double>>> rawData;
-	m_data->Stores["ANNIEEvent"]->Get(RawDataName,rawData);
+	map<unsigned long, Waveform<double>> rawData;
+	string storename; 
+	m_variables.Get("store_name", storename);
+	m_data->Stores.at(storename)->Get(RawDataName, rawData);
+	
 
 	//This variable controls the sampling depth of the
 	//nnls algorithm and allows the template to have
@@ -120,12 +124,6 @@ bool WaveformNNLS::Execute(){
 	}
 
 
-	//It is necessary to make sure that the template
-	//and the rawdata are on the same time-scale. 
-	//What follows is code to set the timescale of the
-	//raw data. It later is adjusted/resampled to match
-	//the template times. 
-	vector<float> sampletimes;
     
 	//different data types will have different sample
 	//times. For example, LAPPDs will eventually have
@@ -134,53 +132,42 @@ bool WaveformNNLS::Execute(){
 	//Possible TODO: include a times vector for your desired
 	//datatype into the ANNIE store?. For now, do logic on
 	//the string that indexes the rawdata type
-	if(RawDataName == "RawLAPPDData")
+	map<unsigned long, vector<double>>* sample_time_map;
+	vector<double> sampletimes;
+	if(RawDataName == "LAPPDWaveforms")
 	{
-		//later, we need to include real sample time data format
-	    //based on non-zero aperture jitter of boards on an lappd/channel
-	    //by channel basis. For now, just assume constant sampling rate
-	    double dt = (1.0/(256*40*1e6))*1e12; //ps
-	    for(int i = 0; i < 256; i++)
-	    {
-	    	sampletimes.push_back(i*dt);
-	    }
+		m_data->Stores.at(storename)->Get("sample_time_map", sample_time_map);
+		sampletimes = sample_time_map->begin()->second; //just as a placeholder, fill sampletimes with first element
 	}
 	//default to avoid crashing
 	else
 	{
-		Waveform<double> example_waveform = rawData[0].front();
-		for(int i = 0; i < example_waveform.GetSamples()->size(); i++)
+		Waveform<double> example_waveform = rawData[0];
+		for(int i = 0; i < (int)example_waveform.GetSamples()->size(); i++)
 		{
 			sampletimes.push_back(i);
 		}
 	}
 
-	//create a new signal times list based on the 
-	//new timestep that was determined from the template.
-	//this is really only used to (1) return the time at which
-	//a solved nnls component waveform should appear in the rawdata
-	//and (2) to count the number of rows and columns in the nnls matrix
-	vector<double> newsignaltimes;
-	for(double t = sampletimes.front(); t <= sampletimes.back(); t+=newtimestep)
-	{
-		newsignaltimes.push_back(t);
-	}
 
 	//the number of rows for the matrix
 	//and the number of samples in the signal waveform
 	//is set to match the timesteps of the NEW template
 	//waveform and the signal waveform. Here, we get
-	//the signal waveform and expand it to that nrows sampling rate
-	map <int, vector<Waveform<double>>> :: iterator itr;
-    Waveform<double> signalwave; 
-    size_t nrows = newsignaltimes.size();
-    int flag; //error flag on nnls solver
-
-    cout << "doing a " << nrows << " x " << nrows << " = " << nrows*nrows << " matrix " << endl;
-
-    //***Assumes all waveforms are same number of samples
+	//the signal waveform and expand it to that nrows sampling rate.
+	//***Assumes all waveforms are same number of samples
     //a number of things in this tool would change if that
     //were not the case
+	size_t nrows = 0; //because I would rather loop than do some int/floor division
+	for(double t = sampletimes.front(); t <= sampletimes.back(); t+=newtimestep)
+	{
+		nrows++;
+	}
+    if(verbosity > 4) cout << "doing a " << nrows << " x " << nrows << " = " << nrows*nrows << " matrix " << endl;
+
+
+
+    
 
     //initialize the main algebra variables
     //for the nnls algo
@@ -197,30 +184,44 @@ bool WaveformNNLS::Execute(){
     //The solution to the NNLS algorithm is 
     //stored in a class defined in the DataModel. 
     //Check out that class for more info.
-    map<int, NnlsSolution> soln;
+    map<unsigned long, NnlsSolution> soln;
 
-
+    //iterator and temporary variables used in the loop
+	Waveform<double> signalwave; 
+	map <unsigned long, Waveform<double>> :: iterator itr;
+	int flag; //error flag on nnls solver
+	vector<double> newsignaltimes;
     for(itr = rawData.begin(); itr != rawData.end(); ++itr)
     {
-    	int ch = itr->first; //channel of this waveform in the loop
-    	cout << "On channel " << ch << endl;
+    	unsigned long ch = itr->first; //channel of this waveform in the loop
+    	if(verbosity > 4) cout << "On channel " << ch << endl;
+
+
+		//create a new signal times list based on the 
+		//new timestep that was determined from the template.
+		//this is really only used to (1) return the time at which
+		//a solved nnls component waveform should appear in the rawdata
+		//and (2) to count the number of rows and columns in the nnls matrix
+		if(RawDataName == "LAPPDWaveforms") sampletimes = sample_time_map->at(ch); //get calibrated sample times
+		for(double t = sampletimes.front(); t <= sampletimes.back(); t+=newtimestep)
+		{
+			newsignaltimes.push_back(t);
+		}
+
 
     	//in the solution object, save the template
     	//waveform for each channel in the map
     	soln[ch].SetTemplate(tempwave, temptimes);
 
-
-    	//I've found that LAPPD has only first element
-    	//of the vector<Waveform<double>> component of the rawData
-    	//populated. Is this true with PMTs? If not, you will need 
-    	//another loop here. 
-    	signalwave = itr->second.front(); 
+    	//the present wave in question
+    	signalwave = itr->second; 
     	
 		//pass the signal vector pointer that gets
 		//modified in the following function
 		BuildWaveformVector(b, signalwave, sampletimes, newtimestep);
     	
     	nnls* solver = new nnls(A, b, maxiter);
+    	solver->setVerbosity(verbosity);
     	flag = solver->optimize();
     	if(flag < 0)
     	{
@@ -229,10 +230,11 @@ bool WaveformNNLS::Execute(){
     	x = solver->getSolution();
 
     	SaveNNLSOutput(&soln[ch], A, x, newsignaltimes);
+    	newsignaltimes.clear();
     }
 
 
-    m_data->Stores["ANNIEEvent"]->Set("nnls_solution", soln);
+    m_data->Stores.at(storename)->Set("nnls_solution", soln);
 
 
 
@@ -261,9 +263,9 @@ void WaveformNNLS::BuildTemplateMatrix(nnlsmatrix* A, Waveform<double> tempwave,
 	//one sample further in time. The elements below the diagonal
 	//are 0, and any elements that are not part of the template
 	//are 0. 
-	for(int row = 0; row < nrows; row++)
+	for(int row = 0; row < (int)nrows; row++)
 	{
-		for(int col = 0; col < nrows; col++)
+		for(int col = 0; col < (int)nrows; col++)
 		{
 			//elements below diagonal are zero
 			if(col < row)
@@ -288,7 +290,7 @@ void WaveformNNLS::BuildTemplateMatrix(nnlsmatrix* A, Waveform<double> tempwave,
 
 //formats the waveform into the vector format expected by nnls algo.
 //see comment above BuildTemplateMatrix for explanation of nrows
-void WaveformNNLS::BuildWaveformVector(nnlsvector* b, Waveform<double> wave, vector<float> times, double template_timestep)
+void WaveformNNLS::BuildWaveformVector(nnlsvector* b, Waveform<double> wave, vector<double> times, double template_timestep)
 {
 
 	//make a new signal vector that is
@@ -296,10 +298,10 @@ void WaveformNNLS::BuildWaveformVector(nnlsvector* b, Waveform<double> wave, vec
 	// so that the timesteps of the template
 	// and signal waveform are equal. 
 	vector<double> newwave;
-	float t0;
-	float t1;
+	double t0;
+	double t1;
 	double current_time;
-	for(int j = 0; j < b->length(); j++)
+	for(int j = 0; j < (int)b->length(); j++)
 	{
 		//current time iterating through 
 		//times scaled for nnls matrix
@@ -308,7 +310,7 @@ void WaveformNNLS::BuildWaveformVector(nnlsvector* b, Waveform<double> wave, vec
 		//find value of waveform at this time by 
 		//finding closest sample times. Assumes the
 		//times vector is ordered
-		for(int i = 0; i < times.size() - 1; i++)
+		for(int i = 0; i < (int)times.size() - 1; i++)
 		{
 			t0 = times.at(i);
 			t1 = times.at(i+1);
@@ -337,7 +339,7 @@ void WaveformNNLS::SaveNNLSOutput(NnlsSolution* soln, nnlsmatrix* A, nnlsvector*
 	A->dot(false, x, bsolv); //now bsolv is the fitted vector waveform
 	//turn vector into waveform
 	Waveform<double> ff; //waveform version of nnls full (summed) solution
-	for(int i = 0; i < bsolv->length(); i++)
+	for(int i = 0; i < (int)bsolv->length(); i++)
 	{
 		ff.PushSample(bsolv->get(i));
 

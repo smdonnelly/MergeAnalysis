@@ -13,7 +13,7 @@
  * @param filePath           Path and name of the output root file.
  */
 FTBFLAPPDDisplay::FTBFLAPPDDisplay(std::string filePath, int confignumber):_LAPPD_sim_app(nullptr),_LAPPD_MC_all_canvas(nullptr),_LAPPD_MC_canvas(nullptr),
-_LAPPD_MC_time_canvas(nullptr),_LAPPD_all_waveforms_canvas(nullptr),_LAPPD_waveform_canvas(nullptr),_all_hits(nullptr),_output_file(nullptr),
+_LAPPD_MC_time_canvas(nullptr),_LAPPD_all_waveforms_canvas(nullptr),_LAPPD_waveform_canvas(nullptr),_output_file(nullptr),
 _output_file_name(filePath),_config_number(confignumber)
 {
   //TApplication
@@ -93,19 +93,6 @@ FTBFLAPPDDisplay::~FTBFLAPPDDisplay()
 }
 
 /**
- * [FTBFLAPPDDisplay::InitialiseHistoAllLAPPDs description]
- * @param eventNumber [description]
- */
-void FTBFLAPPDDisplay::InitialiseHistoAllLAPPDs(int eventNumber){
-	//Create the name for the histogram for all LAPPDs
-	std::string eventnumber = boost::lexical_cast < std::string > (eventNumber);
-	string allHitsName = "event" + eventnumber + "AllLAPPDs";
-	const char *allHitsNamec = allHitsName.c_str();
-	//Initialisation of the histogram for all LAPPDs
-	_all_hits = new TH2D(allHitsNamec, allHitsNamec, 200, 0, 180, 200, -1.1, 1.1);
-}
-
-/**
  * Method OpenNewFile: This method is needed to avoid the creation of too big .root files.
  *                     The splitting can be adjusted in the LAPPDSim tool.
  * @param filenumber: The number of the current file
@@ -137,23 +124,7 @@ void FTBFLAPPDDisplay::OpenNewFile(int filenumber){
  * Method FinaliseHistoAllLAPPDs: Cosmetics and drawing of the histogram for all LAPPDs
  */
 void FTBFLAPPDDisplay::FinaliseHistoAllLAPPDs(){
-  //Cosmetics
-	_output_file->cd();
-	_all_hits->GetXaxis()->SetTitle("Radius [m]");
-	_all_hits->GetYaxis()->SetTitle("Height [m]");
-	_all_hits->GetZaxis()->SetTitle("Arrival time [ns]");
-	_all_hits->GetZaxis()->SetTitleOffset(1.4);
-	_all_hits->Write();
-  //Canvas adjustments
-	if(_config_number == 2)
-	{
-	_LAPPD_MC_all_canvas->cd();
-	_all_hits->SetStats(0);
-	_all_hits->Draw("COLZ");
-	_LAPPD_MC_all_canvas->Modified();
-	_LAPPD_MC_all_canvas->Update();
-	}
-	_all_hits->Clear();
+	return;
 }
 
 /**
@@ -163,7 +134,7 @@ void FTBFLAPPDDisplay::FinaliseHistoAllLAPPDs(){
  * @param tubeNumber     The detector ID of the LAPPD also used for the names of the histograms.
  * @param waveformVector The vector, from which the waveforms can be retrieved
  */
-void FTBFLAPPDDisplay::RecoDrawing(int eventCounter, map<unsigned long, Waveform<double>> LAPPDWaves, map<unsigned long, Channel>* geometry_channels_lappds, map<unsigned long, vector<double>>* sample_time_map)
+void FTBFLAPPDDisplay::PlotRawWaves(int eventCounter, map<unsigned long, Waveform<double>> LAPPDWaves, map<unsigned long, Channel>* geometry_channels_lappds, map<unsigned long, vector<double>>* sample_time_map)
 {
   //Creation of the histogram names
 	_output_file->cd();
@@ -270,3 +241,230 @@ void FTBFLAPPDDisplay::RecoDrawing(int eventCounter, map<unsigned long, Waveform
     
 
 }
+
+
+
+void FTBFLAPPDDisplay::PlotNnlsWaves(int eventCounter, map<unsigned long, Waveform<double>> LAPPDWaves, map<unsigned long, Channel>* geometry_channels_lappds, map<unsigned long, vector<double>>* sample_time_map, map<unsigned long, NnlsSolution> nnlssoln)
+{
+  //Creation of the histogram names
+	_output_file->cd();
+
+	std::string eventnumber = boost::lexical_cast < std::string > (eventCounter);
+
+	//heatmap histogram just has all of the active channels as the y axis. 
+	std::string heatmapName = "eventheatmap" + eventnumber;
+
+	//want to bin the heatmap based on 
+	//the times and channel numbers of this entire event
+	double maxtime, mintime;
+	double maxchan, minchan;
+	maxtime = sample_time_map->at(0).back(); //just to initialize
+	mintime = sample_time_map->at(0).front();
+	maxchan = LAPPDWaves.rbegin()->first; 
+	minchan = LAPPDWaves.rbegin()->first; 
+	map<unsigned long, Waveform<double>>::iterator waveit;
+	for(waveit = LAPPDWaves.begin(); waveit != LAPPDWaves.end(); ++waveit)
+	{
+		unsigned long thisch = waveit->first;
+		if(thisch > maxchan) maxchan = thisch;
+		if(thisch < minchan) minchan = thisch;
+	}
+	//loop to find max time
+	map<unsigned long, vector<double>>::iterator timeit;
+	for(timeit = sample_time_map->begin(); timeit != sample_time_map->end(); ++timeit)
+	{
+		vector<double> thistimes = timeit->second;
+		double thismax = *max_element(thistimes.begin(), thistimes.end());
+		double thismin = *min_element(thistimes.begin(), thistimes.end());
+		if(thismax > maxtime) maxtime = thismax;
+		if(thismin < mintime) mintime = thismin;
+	}
+
+	TH2D* heatmapHist = new TH2D(heatmapName.c_str(), heatmapName.c_str(), 256, mintime-0.5, maxtime+0.5, int(maxchan-minchan+1), minchan-0.5, maxchan+0.5);
+
+	//start filling histograms
+	map<unsigned long, Waveform<double>> ::iterator it_waves;
+	for(it_waves = LAPPDWaves.begin(); it_waves != LAPPDWaves.end(); ++it_waves)
+	{
+		unsigned long data_ch = it_waves->first;
+		Channel this_ch = geometry_channels_lappds->at(data_ch);
+		NnlsSolution* this_nnls_soln = new NnlsSolution;
+		this_nnls_soln = &(nnlssoln.at(data_ch));
+		Waveform<double>* nnls_wave = new Waveform<double>;
+		nnls_wave = this_nnls_soln->GetFullSoln();//full nnls solution waveform
+
+		//Initialisation of the histograms
+		std::string chanNumber = boost::lexical_cast < std::string > (data_ch);
+		std::string boardNumber = boost::lexical_cast < std::string > (this_ch.GetSignalCard());
+		std::string histname; 
+		if(this_ch.GetStripSide() == 1) histname = "event" + eventnumber + "board" + boardNumber + "chan" + chanNumber + "right";
+		else histname = "event" + eventnumber + "board" + boardNumber + "chan" + chanNumber + "left";
+
+		std::string nnlsname = histname+"_nnls";
+		vector<double> these_times = sample_time_map->at(data_ch);
+		vector<double> nnls_times = nnlssoln.at(data_ch).GetFullSolutionTimes();
+		int nbins = these_times.size();
+		double min_time = these_times.front();
+		double max_time = these_times.back();
+
+		int nbins_nnls = nnls_wave->GetSamples()->size(); 
+		TH1D* waveformhist = new TH1D(histname.c_str(), histname.c_str(), nbins, min_time-0.5, max_time+0.5);
+		TH1D* nnlshist = new TH1D(nnlsname.c_str(), nnlsname.c_str(), nbins_nnls, min_time-0.5, max_time+0.5); //assumes nnls wave is within time bounds
+
+		//fill the histogram
+		Waveform<double> this_wave = it_waves->second;
+		for(int samp = 0; samp < (int)(this_wave.GetSamples()->size()); samp++)
+		{
+			waveformhist->Fill(these_times.at(samp), this_wave.GetSample(samp)); //individual hist
+			//clip the 2D display at 250 mV
+			if(this_wave.GetSample(samp) > 100) heatmapHist->Fill(these_times.at(samp), data_ch, 100); 
+			else if(this_wave.GetSample(samp) < -250) heatmapHist->Fill(these_times.at(samp), data_ch, -250); 
+			else heatmapHist->Fill(these_times.at(samp), data_ch, this_wave.GetSample(samp)); 
+			
+		}
+
+		//fill the nnls histogram
+		for(int samp = 0; samp < (int)(nnls_wave->GetSamples()->size()); samp++)
+		{
+			nnlshist->Fill(nnls_times.at(samp), nnls_wave->GetSample(samp)); //individual hist
+		}
+		//Cosmetics
+		waveformhist->GetXaxis()->SetTitle("Time [ps]");
+		waveformhist->GetYaxis()->SetTitle("Voltage [mV]");
+		waveformhist->GetYaxis()->SetTitleOffset(1.4);
+		waveformhist->Write();
+
+		nnlshist->GetXaxis()->SetTitle("Time [ps]");
+		nnlshist->GetYaxis()->SetTitle("Voltage [mV]");
+		nnlshist->GetYaxis()->SetTitleOffset(1.4);
+		nnlshist->Write();
+
+
+	    //Canvas adjustments
+	    if(_config_number == 2){
+	      _LAPPD_waveform_canvas->cd(1);
+	      waveformhist->SetStats(0);
+	      waveformhist->Draw("HIST");
+	      _LAPPD_waveform_canvas->Modified();
+	    	_LAPPD_waveform_canvas->Update();
+	      }
+	}
+
+  //Cosmetics
+	heatmapHist->GetXaxis()->SetTitle("Time [ps]");
+	heatmapHist->GetYaxis()->SetTitle("Chan number");
+	heatmapHist->GetZaxis()->SetTitle("Voltage [mV]");
+	//leftAllWaveforms->GetZaxis()->SetTitleOffset(1.4);
+	heatmapHist->Write();
+
+
+  //Canvas adjustments
+	if(_config_number == 2)
+	{
+	_LAPPD_all_waveforms_canvas->cd(1);
+	heatmapHist->SetStats(0);
+	heatmapHist->Draw("COLZ");
+	_LAPPD_all_waveforms_canvas->Modified();
+	_LAPPD_all_waveforms_canvas->Update();
+	}
+
+	heatmapHist->Clear();
+    
+
+}
+
+
+void FTBFLAPPDDisplay::ChiSquaredAnalysis(int eventCounter, map<unsigned long, Waveform<double>> LAPPDWaves, map<unsigned long, vector<double>>* sample_time_map, map<unsigned long, NnlsSolution> nnlssoln)
+{
+	_output_file->cd();
+  double sampling_noise = 1.0; //mV constant noise
+
+  //histogram to save all of the ChiSq/ndfs
+  string evno = boost::lexical_cast < std::string > (eventCounter);
+  string histname = "all_chisq";
+  //check if the histogram already exists. 
+  //we want to pile all events' chisq on the same
+  //hist. 
+  TH1D* all_chisq;
+  if(_output_file->GetListOfKeys()->Contains(histname.c_str()))
+  {
+  	all_chisq = (TH1D*)_output_file->Get(histname.c_str());
+  }
+  else
+  {
+  	all_chisq = new TH1D(histname.c_str(), histname.c_str(), 100, 50, 1000);
+  }
+
+  map<unsigned long, Waveform<double>>::iterator wavit;
+  for(wavit = LAPPDWaves.begin(); wavit != LAPPDWaves.end(); ++wavit)
+  {
+    unsigned long ch = wavit->first;
+    Waveform<double> thewav = wavit->second;
+    vector<double> thetimes = sample_time_map->at(ch);
+    NnlsSolution soln = nnlssoln.at(ch);
+    vector<double> nnlstimes = soln.GetFullSolutionTimes();
+    Waveform<double> nnlswav = *(soln.GetFullSoln());
+    int ndf = 0; //number of degrees of freedom
+    double chisq = 0; //chi squared
+
+    //loop through nnls wave and find the value
+    //of the raw wave at each time. 
+    for(int ti = 0; ti < (int)nnlstimes.size(); ti++)
+    {
+    	double t = nnlstimes.at(ti);
+    	double nnlsvalue = nnlswav.GetSample(ti);
+    	double t0, t1;
+    	double rawvalue;
+    	bool found = false;
+    	ndf++;
+
+    	for(int i = 0; i < (int)thetimes.size() - 1; i++)
+		{
+			t0 = thetimes.at(i);
+			t1 = thetimes.at(i+1);
+			if(t >= t0 and t < t1)
+			{
+				rawvalue = thewav.GetSample(i);
+				found = true;
+				break;
+			}
+		}
+
+		if(found)
+		{
+			//add to ChiSq:
+			//find difference squared between
+			//fit and the raw wav. If the raw wav
+			//is positive valued, it isn't considered
+			//by the nnls. I would still call a degree of
+			//freedom, but take difference of nnls w.r.t. 0. 
+			if(rawvalue >= 0)
+			{
+				chisq += (nnlsvalue)*(nnlsvalue)/(sampling_noise*sampling_noise);
+			}
+			else
+			{
+				chisq += (rawvalue - nnlsvalue)*(rawvalue - nnlsvalue)/(sampling_noise*sampling_noise);
+			}
+
+		}
+    }
+
+    //fill the hist with this chisq value
+    //all_chisq->Fill(chisq/(double)ndf);
+    all_chisq->Fill(chisq);
+    cout << "ndf is " << ndf << endl;
+    //reinitialize
+    ndf = 0;
+    chisq = 0;
+  }
+ 
+	
+	all_chisq->GetXaxis()->SetTitle("ChiSq/NDF");
+	all_chisq->GetYaxis()->SetTitle("n waveforms");
+	all_chisq->GetYaxis()->SetTitleOffset(1.4);
+	all_chisq->Write();
+
+}
+
+

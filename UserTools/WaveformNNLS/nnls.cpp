@@ -43,8 +43,11 @@ int nnls::optimize()
   double step;
   double *px = x->getData();
 
-  cerr << "Iter           Obj           ||g||" << endl;
-  cerr << "----------------------------------" << endl;
+  if(verbosity>4)
+  {
+    cerr << "Iter           Obj           ||g||" << endl;
+    cerr << "----------------------------------" << endl;
+  }
 
   while (!term) {
     out.iter++;
@@ -73,12 +76,12 @@ int nnls::optimize()
     if (out.iter % M == 0) {
       checkDescentUpdateBeta();
     }
-    if (out.iter % 10 == 0)
+    if (out.iter % 10 == 0 and verbosity > 4)
       showStatus();
 
     //return 0;
   }
-  showStatus();
+  if(verbosity > 4) showStatus();
   cleanUp();
   return 0;
 }

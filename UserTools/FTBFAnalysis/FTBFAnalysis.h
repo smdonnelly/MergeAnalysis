@@ -12,7 +12,6 @@
 #include <TCanvas.h>
 #include <TString.h>
 #include "FTBFLAPPDDisplay.h"
-#include "NnlsSolution.h"
 
 class FTBFAnalysis: public Tool {
 
@@ -22,11 +21,8 @@ class FTBFAnalysis: public Tool {
   FTBFAnalysis();
   bool Initialise(std::string configfile,DataModel &data);
   bool Execute();
+  void ChiSquaredAnalysis(int _event_no, map<unsigned long, NnlsSolution> nnlssoln, map<unsigned long, Waveform<double>> LAPPDWaveforms);
   bool Finalise();
-  void HeatmapEvent(int event, int board);
-  void PlotSeparateChannels(int event, int board);
-  void PlotRawHists();
-  void PlotNNLSandRaw();
 
 
 

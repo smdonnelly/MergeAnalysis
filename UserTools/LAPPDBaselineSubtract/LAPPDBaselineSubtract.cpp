@@ -12,8 +12,7 @@ bool LAPPDBaselineSubtract::Initialise(std::string configfile, DataModel &data){
   m_data= &data; //assigning transient data pointer
   /////////////////////////////////////////////////////////////////
 
-  bool isBLsub = true;
-  m_data->Stores["ANNIEEvent"]->Header->Set("isBLsubtracted",isBLsub);
+  
 
   m_variables.Get("Nsamples", DimSize);
   m_variables.Get("SampleSize",Deltat);
@@ -23,39 +22,175 @@ bool LAPPDBaselineSubtract::Initialise(std::string configfile, DataModel &data){
   return true;
 }
 
-
+//This function has a switch case for 
+//various baseline subtraction methods. 
+//it then stores baseline subtracted
+//data into a new map in the store. 
+//It also secretly removes non-physical
+//spikes in the data. 
 bool LAPPDBaselineSubtract::Execute(){
 
-  Waveform<double> bwav;
+
+  string storename; 
+  m_variables.Get("store_name", storename);
 
   // get raw lappd data
-  std::map<int,vector<Waveform<double>>> rawlappddata;
-  m_data->Stores["ANNIEEvent"]->Get("RawLAPPDData",rawlappddata);
+  map<unsigned long, Waveform<double>> LAPPDWaveforms;
+  m_data->Stores.at(storename)->Get("LAPPDWaveforms",LAPPDWaveforms);
+
+  bool isBLsub = true;
+  m_data->Stores.at(storename)->Header->Set("isBLsubtracted",isBLsub);
+
+  int remove_spikes = 1;
+  m_variables.Get("remove_spikes", remove_spikes);
+
+  string subtraction_method;
+  m_variables.Get("subtraction_method", subtraction_method);
 
   // the filtered Waveform
-  std::map<int,vector<Waveform<double>>> blsublappddata;
+  map<unsigned long, Waveform<double>> blsublappddata;
 
-  map <int, vector<Waveform<double>>> :: iterator itr;
-  for (itr = rawlappddata.begin(); itr != rawlappddata.end(); ++itr){
-    int channelno = itr->first;
-    vector<Waveform<double>> Vwavs = itr->second;
-    vector<Waveform<double>> Vfwavs;
+  map<unsigned long, Waveform<double>> :: iterator itr;
+  for (itr = LAPPDWaveforms.begin(); itr != LAPPDWaveforms.end(); ++itr)
+  {
+    unsigned long channelno = itr->first;
+    Waveform<double> bwav = itr->second;
 
-    //loop over all Waveforms
-    for(int i=0; i<Vwavs.size(); i++){
+    Waveform<double> input_wave; 
 
-        Waveform<double> bwav = Vwavs.at(i);
-        Waveform<double> blswav = SubtractSine(bwav);
-        Vfwavs.push_back(blswav);
-      }
-
-      blsublappddata.insert(pair <int,vector<Waveform<double>>> (channelno,Vfwavs));
+    if(remove_spikes == 1)
+    {
+      input_wave = RemoveSpikes(bwav);
     }
+    else
+    {
+      input_wave = bwav;
+    }
+    
+    Waveform<double> blswav;
+    if(subtraction_method == "median")
+    {
+      blswav = SubtractMedian(input_wave);
+    }
+    else if(subtraction_method == "sin")
+    {
+      blswav = SubtractSine(input_wave);
+    }
+    
 
-  m_data->Stores["ANNIEEvent"]->Set("BLsubtractedLAPPDData",blsublappddata);
+    blsublappddata.insert(pair <unsigned long, Waveform<double>>(channelno,blswav));
+  }
+
+  m_data->Stores.at(storename)->Set("LAPPDWaveforms",blsublappddata);
 
   return true;
 }
+
+
+//If the raw waveform has a sample that is >=1200mV
+//then linearly interpolate to the next good sample value. 
+Waveform<double> LAPPDBaselineSubtract::RemoveSpikes(Waveform<double> iwav) {
+  Waveform<double> rmWav;
+
+  vector<double> iwav_vec = *(iwav.GetSamples());
+  vector<double> adjusted_vec;
+
+  int left_good_sample;
+  int right_good_sample;
+  bool caught = false;
+  double slope;
+  double shift;
+  double absmax = 1200.0; //mV
+  for(int i = 0; i < (int)iwav_vec.size(); i++)
+  {
+    if(abs(iwav_vec.at(i)) >= absmax)
+    {
+      //if this is first time crossing
+      if(!caught)
+      {
+        left_good_sample = i-1;
+        caught = true;
+      }
+    }
+    else if(abs(iwav_vec.at(i)) < absmax)
+    {
+      //if we had a caught spike
+      //but now are below, modify the
+      //waveform
+      if(caught)
+      {
+        right_good_sample = i;
+        //something went horribly wrong with logic
+        //if this happens. double check code
+        if(right_good_sample == left_good_sample)
+        {
+          cout << "something wrong with logic. cannot remove spikes" << endl;
+          rmWav.SetSamples(iwav_vec);
+          return rmWav;
+        }
+        //interpolate between good samples
+        double y1 = iwav_vec.at(left_good_sample);
+        double y2 = iwav_vec.at(right_good_sample);
+        slope = (y2 - y1)/(right_good_sample - left_good_sample + 1); //denom is never 0
+        shift = y1 - slope*left_good_sample;
+
+        //add corrected samples to adjusted_vector
+        for(int j = left_good_sample+1; j < right_good_sample; j++)
+        {
+          adjusted_vec.push_back(slope*j + shift);
+        }
+
+        //reinitialize to normal state
+        caught = false;
+
+      }
+      else
+      {
+        adjusted_vec.push_back(iwav_vec.at(i));
+      }
+    }
+    else
+    {
+      continue;
+    }
+  }
+
+  rmWav.SetSamples(adjusted_vec);
+  return rmWav;
+
+}
+
+
+Waveform<double> LAPPDBaselineSubtract::SubtractMedian(Waveform<double> iwav) {
+  Waveform<double> subWav;
+
+  vector<double> thesamples = *(iwav.GetSamples());
+  //sort the vector
+  sort(thesamples.begin(), thesamples.end());
+
+
+  int nsamples = (int)thesamples.size();
+  double median = 0;
+  //if it's even, take average of two middle samples
+  if(nsamples % 2 == 0)
+  {
+    median = 0.5*(thesamples.at((int)nsamples/2) + thesamples.at((int)nsamples/2 - 1));
+  }
+  else
+  {
+    median = thesamples.at((int)nsamples/2);
+  }
+
+  //subtract median from all samples in raw wav
+  for(int i = 0; i < (int)thesamples.size(); i++)
+  {
+    subWav.PushSample(iwav.GetSample(i) - median);
+  }
+
+  return subWav;
+
+}
+
 
 
 Waveform<double> LAPPDBaselineSubtract::SubtractSine(Waveform<double> iwav) {

@@ -46,6 +46,9 @@ bool FTBFAnalysis::Execute(){
   m_data->Stores.at(storename)->Get("LAPPDWaveforms", LAPPDWaveforms);
   m_data->Stores.at(storename)->Get("sample_time_map", sample_time_map);
 
+  int nnls_analysis;
+  m_variables.Get("nnls_analysis", nnls_analysis); // if you want to plot nnls solutions
+
     
     //The files become too large, if one tries to save all WCSim events into one file.
     //Every 100 events get a new file.
@@ -58,13 +61,24 @@ bool FTBFAnalysis::Execute(){
     
     
     
-    _display->RecoDrawing(_event_no, LAPPDWaveforms, all_lappd_channels, sample_time_map);
-   /*
+    if(nnls_analysis == 1)
+    {
+      map<unsigned long, NnlsSolution> nnlssoln;
+      m_data->Stores.at(storename)->Get("nnls_solution", nnlssoln);
+      _display->PlotNnlsWaves(_event_no, LAPPDWaveforms, all_lappd_channels, sample_time_map, nnlssoln);
+      _display->ChiSquaredAnalysis(_event_no, LAPPDWaveforms, sample_time_map, nnlssoln);
+    } 
+    else
+    {
+      _display->PlotRawWaves(_event_no, LAPPDWaveforms, all_lappd_channels, sample_time_map);
+
+    }
+
     if (_display_config > 0)
     {
         _display->FinaliseHistoAllLAPPDs();
     }
-    */
+
   
     _event_no++;
     return true;
@@ -72,35 +86,6 @@ bool FTBFAnalysis::Execute(){
 }
 
 
-void FTBFAnalysis::PlotNNLSandRaw()
-{
-
-    return; 
-
-}   
-
-
-void FTBFAnalysis::PlotRawHists()
-{
-    
-    return;
-}
-
-
-//write's a heatmap of an event to 
-//the rootfile
-void FTBFAnalysis::HeatmapEvent(int event, int board)
-{
-    return;
-}
-
-//write's a heatmap of an event to 
-//the rootfile. Currently not working
-//because it only draws one channel? 
-void FTBFAnalysis::PlotSeparateChannels(int event, int board)
-{
-    return;
-}
 
 bool FTBFAnalysis::Finalise()
 {

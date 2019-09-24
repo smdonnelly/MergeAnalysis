@@ -22,6 +22,8 @@ class LAPPDBaselineSubtract: public Tool {
  private:
 
    Waveform<double> SubtractSine(Waveform<double> iwav);
+   Waveform<double> SubtractMedian(Waveform<double> iwav);
+   Waveform<double> RemoveSpikes(Waveform<double> iwav);
    bool isSim;
    int DimSize;
    double Deltat;
