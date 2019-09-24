@@ -1,0 +1,57 @@
+#ToolChain dynamic setup file
+
+#LoadFTBFGeometry configs
+ChannelConfigFile /docker_toolchain/data/calibrations/pion_run.root
+
+#LAPPDParseACC configs
+lappd_data_filepath /docker_toolchain/data
+lappd_data_filename test_chain
+geometry_name FTBFGeometry
+store_name FTBFEvent
+
+#FTBFAnalysis configs
+OutputFile /docker_toolchain/data/chisq_analysis_10sf_50iter.root
+EventDisplay 1 #0 = no event display; 1 = histograms will be written, but not displayed; 2 histograms will be displayed and written OutputFile 
+nnls_analysis 1
+
+#WaveformNNLS configs
+tempfilename /docker_toolchain/data/pulsecharacteristics.root
+temphistname templatepulse #name of the TH1D in the template file
+sampling_factor 10 #larger number is smaller nnls matrices
+maxiter 50
+rawdataname LAPPDWaveforms
+
+#LAPPDBaselineSubtract
+subtraction_method median
+remove_spikes 1
+Nsamples 256
+SampleSize 97
+LowBLfitrange 5000
+HiBLfitrange 10000
+
+
+
+##### Runtime Paramiters #####
+verbose 3 ## Verbosity level of ToolChain
+error_level 0 # 0= do not exit, 1= exit on unhandeled errors only, 2= exit on unhandeled errors and handeled errors
+attempt_recover 1 ## 1= will attempt to finalise if an execute fails
+remote_port 24002
+IO_Threads 1 ## Number of threads for network traffic (~ 1/Gbps)
+
+###### Logging #####
+log_mode Interactive # Interactive=cout , Remote= remote logging system "serservice_name Remote_Logging" , Local = local file log;
+log_local_path ./log
+log_service LogStore
+
+
+###### Service discovery ##### Ignore these settings for local analysis
+service_publish_sec -1
+service_kick_sec -1
+
+##### Tools To Add #####
+Tools_File configfiles/FTBFanalysis/ToolsConfig  ## list of tools to run and their config files
+
+##### Run Type #####
+Inline 19 ## number of Execute steps in program, -1 infinite loop that is ended by user 
+Interactive 0 ## set to 1 if you want to run the code interactively
+
