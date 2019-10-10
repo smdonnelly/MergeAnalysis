@@ -72,7 +72,7 @@ void LAPPDCalibrationWriter::DefaultSimple()
 	_parallel_equidistant_position = 0; //for all in this default calibration
 	_strip_no = 0;
 	
-	_velocity = 114.0; //mm/ns
+	_velocity = 150.0; //mm/ns
 	double sample_width = 97.0; //ps
 	double transverse_spacing = 8.1; // mm
 	double halfside = transverse_spacing*14;
@@ -162,7 +162,94 @@ void LAPPDCalibrationWriter::DefaultSimple()
 void LAPPDCalibrationWriter::FTBFPionRun()
 {
 	
-	DefaultSimple();
+	int nchs_per_board = 30;
+	vector<int> sync_channels = {29, 30}; //for every board
+	_ignore_channel = false; //for every ch 
+	_strip_side = false; //at first, then flip at each iteration. 
+	_single_ended = false; 
+	_transverse_position = 0.0; //calculated in the loop
+	_parallel_equidistant_position = 0; //for all in this default calibration
+	_strip_no = 0;
+	
+	_velocity = 150.0; //mm/ns
+	double sample_width = 97.0; //ps
+	double transverse_spacing = 8.1; // mm
+	double halfside = transverse_spacing*14;
+	int top_or_bottom = 0;
+
+	//fill sample times which will be the same for all channels
+	for(int i = 0; i < 256; i++)
+	{
+		_sample_times.push_back(i*sample_width);
+	}
+
+	//create only 15 transverse positions, correpsonding to the
+	//strip numbers. 
+	vector<double> trans_pos;
+	for(int i = 0; i < 15; i++)
+	{
+		trans_pos.push_back(i*transverse_spacing);
+	}
+
+
+	//as default, do 4 boards
+	int nboards = 4;
+	vector<int> board_names = {10, 20, 33, 36};
+	vector<int> lappd_ids = {1, 0, 0, 1};
+
+	for(int board = 0; board < nboards; board++)
+	{
+		//give it a side
+		if(board % 2 == 0)
+		{
+			_strip_side = false;
+			if(board == 2) top_or_bottom = 1;
+			else top_or_bottom = 0;
+		} 
+		else
+		{
+			_strip_side = true;
+			if(board == 3) top_or_bottom = 1;
+			else top_or_bottom = 0;
+		}
+
+		//board attributes
+		_board_name = board_names.at(board);
+		_lappd_id = lappd_ids.at(board);
+		_board_id = board;
+
+		//the only channel attributes that change are
+		//it's id and whether it is a sync channel. 
+		for(int ch = 1; ch <= nchs_per_board; ch++)
+		{
+			//check if it is a synch channel
+			vector<int>::iterator it = std::find(sync_channels.begin(), sync_channels.end(), ch);
+			if(it != sync_channels.end())
+			{
+				_sync_channel = true;
+			}
+			else
+			{
+				_sync_channel = false;
+			}
+
+			if(_sync_channel)
+			{
+				_strip_no = 100; //handle this better in the future maybe? 
+				_transverse_position = 1000; //handle this better? 
+			} 
+			else
+			{
+				if(ch > 14) _strip_no = ch - 15;
+				else _strip_no = ch - 1;
+				_transverse_position = trans_pos.at(_strip_no) + top_or_bottom*halfside;
+			}
+
+			_channel_id = ch;
+
+			_calibtree->Fill();
+		}
+	}
 
 	return;
 }
