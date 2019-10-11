@@ -30,6 +30,11 @@ LowBLfitrange 5000
 HiBLfitrange 10000
 
 
+#LAPPDIntegratePulse configs
+integration_type nnls #currently can be nnls or ranged where ranged is a constant time-range integration on raw data from ANNIEEvent store and nnls uses info from "store_name" above and gets nnlssolutions 
+
+
+
 
 ##### Runtime Paramiters #####
 verbose 3 ## Verbosity level of ToolChain
