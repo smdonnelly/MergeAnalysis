@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include "Tool.h"
+#include "NnlsSolution.h"
 
 class LAPPDIntegratePulse: public Tool {
 
@@ -20,10 +21,14 @@ class LAPPDIntegratePulse: public Tool {
  private:
 
    double CalcIntegral(Waveform<double> hwav, double lowR, double hiR);
+   void RawConstRangeIntegral();
+   void TotalChargeFromNNLS(map<unsigned long, NnlsSolution> nnlssolns);
    int DimSize;
    double Deltat;
    double lowR;
    double hiR;
+   string storename;
+   double termination; //termination resistance in ohms
 
 };
 

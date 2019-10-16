@@ -29,6 +29,8 @@ bool LAPPDCalibrationWriter::Initialise(std::string configfile, DataModel &data)
   _calibtree->Branch("parallel_equidistant_position",&_parallel_equidistant_position, "_parallel_equidistant_position/D");
   _calibtree->Branch("transverse_position",&_transverse_position, "_transverse_position/D");
   _calibtree->Branch("sample_times",&_sample_times);
+  _calibtree->Branch("laser_on_charges",&_laser_on_charges);
+  _calibtree->Branch("laser_off_charges",&_laser_off_charges);
   _calibtree->Branch("lappd_id", &_lappd_id);
   _calibtree->Branch("strip_no", &_strip_no);
 
@@ -177,6 +179,15 @@ void LAPPDCalibrationWriter::FTBFPionRun()
 	double halfside = transverse_spacing*14;
 	int top_or_bottom = 0;
 
+
+	//parsing the photoelectron spectrum files
+	vector<double> lappd0_laser_on = ParseAsciiCharges("/docker_toolchain/data/calibrations/planacon_charge_dist.txt");
+	vector<double> lappd1_laser_on = ParseAsciiCharges("/docker_toolchain/data/calibrations/planacon_charge_dist.txt");
+	vector<double> lappd0_laser_off = ParseAsciiCharges("/docker_toolchain/data/calibrations/planacon_background.txt");
+	vector<double> lappd1_laser_off = ParseAsciiCharges("/docker_toolchain/data/calibrations/planacon_background.txt");
+
+
+
 	//fill sample times which will be the same for all channels
 	for(int i = 0; i < 256; i++)
 	{
@@ -218,6 +229,18 @@ void LAPPDCalibrationWriter::FTBFPionRun()
 		_lappd_id = lappd_ids.at(board);
 		_board_id = board;
 
+		//lappd based attributes
+		if(_lappd_id == 1)
+		{
+			_laser_on_charges = lappd1_laser_on;
+			_laser_off_charges = lappd1_laser_off;
+		}
+		else if(_lappd_id == 0)
+		{
+			_laser_on_charges = lappd0_laser_on;
+			_laser_off_charges = lappd0_laser_off;
+		}
+
 		//the only channel attributes that change are
 		//it's id and whether it is a sync channel. 
 		for(int ch = 1; ch <= nchs_per_board; ch++)
@@ -257,6 +280,34 @@ void LAPPDCalibrationWriter::FTBFPionRun()
 void LAPPDCalibrationWriter::HandEntry()
 {
 	return;
+}
+
+vector<double> LAPPDCalibrationWriter::ParseAsciiCharges(string infilename)
+{
+
+	vector<double> charges;
+
+
+	ifstream infile; //ascii text of charges separated by commas all on one line
+	infile.open(infilename);
+	if(!infile.is_open())
+	{
+		cout << "Could not open infile: " << infilename << " for spe charge distribution" << endl;
+		return charges; 
+	}
+
+	//parse laser on data
+	string theline;
+	infile >> theline;
+
+	stringstream ll(theline);
+	string charge_segment;
+	while(getline(ll, charge_segment, ','))
+	{
+		charges.push_back(stod(charge_segment)*1000); //1000 is for ps conversion, BE CAREFUL! This is put in during testing. 
+	}
+
+	return charges;
 }
 
 
