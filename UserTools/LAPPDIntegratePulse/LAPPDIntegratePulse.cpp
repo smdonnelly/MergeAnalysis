@@ -23,7 +23,9 @@ bool LAPPDIntegratePulse::Execute(){
 
   //storename for various functions and saving
   m_variables.Get("store_name", storename);
-  m_variables.Get("termination", termination);//termination resistance in ohms
+  string term;
+  m_variables.Get("termination", term);//termination resistance in ohms
+  termination = stod(term);
   string integ_type;
   m_variables.Get("integration_type", integ_type);
   if(integ_type == "ranged")

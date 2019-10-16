@@ -5,6 +5,8 @@
 #include <iostream>
 
 #include "Tool.h"
+#include "TTree.h"
+
 
 
 /**
@@ -25,13 +27,20 @@ class EstimateNPE: public Tool {
   bool Initialise(std::string configfile,DataModel &data); ///< Initialise Function for setting up Tool resources. @param configfile The path and name of the dynamic configuration file to read in. @param data A reference to the transient data class used to pass information between Tools.
   bool Execute(); ///< Execute function used to perform Tool purpose.
   bool Finalise(); ///< Finalise function used to clean up resources.
+  
 
 
  private:
  	string storename;
- 	string spectrum_filename; //root file containing branches with SPE spectrum and background spectrum
- 	vector<double> spe_spectrum;
- 	double threshold_fraction; //f from saldanha
+ 	TString _calib_filename; //same as acdc calibration root file, also contains PE spectra
+ 	TTree* _calib_tree;
+ 	vector<double>* _laser_on = 0; //branch address for signal spe laser data
+ 	vector<double>* _laser_off = 0; //branch address for background spe laser data
+ 	int _lappd_id; //for indexing the spe data with lappd number
+ 	double _threshold_fraction; //f from saldanha
+
+ 	double RunEstimator(double c);
+ 	void VarianceAndMean(vector<double> a, double& V, double& E);
  	
 
 

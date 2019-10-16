@@ -10,14 +10,14 @@ geometry_name FTBFGeometry
 store_name FTBFEvent
 
 #FTBFAnalysis configs
-OutputFile /docker_toolchain/data/chisq_analysis_10sf_50iter.root
+OutputFile /docker_toolchain/data/analysis.root
 EventDisplay 1 #0 = no event display; 1 = histograms will be written, but not displayed; 2 histograms will be displayed and written OutputFile 
 nnls_analysis 1
 
 #WaveformNNLS configs
 tempfilename /docker_toolchain/data/pulsecharacteristics.root
 temphistname templatepulse #name of the TH1D in the template file
-sampling_factor 10 #larger number is smaller nnls matrices
+sampling_factor 70 #larger number is smaller nnls matrices
 maxiter 50
 rawdataname LAPPDWaveforms
 
@@ -32,6 +32,16 @@ HiBLfitrange 10000
 
 #LAPPDIntegratePulse configs
 integration_type nnls #currently can be nnls or ranged where ranged is a constant time-range integration on raw data from ANNIEEvent store and nnls uses info from "store_name" above and gets nnlssolutions 
+termination 50
+#these are unused at the moment
+Nsamples 256
+SampleSize 97
+IntegLow 10000
+IntegHi 15000
+
+
+#EstimateNPE, reference arXiv: 1602.03150v2 "Saldanha" 
+background_f 0.4 #fraction of background trigger events below an upperbound charge cut for defining 0-pe. must be < 1
 
 
 
@@ -57,6 +67,6 @@ service_kick_sec -1
 Tools_File configfiles/FTBFanalysis/ToolsConfig  ## list of tools to run and their config files
 
 ##### Run Type #####
-Inline 19 ## number of Execute steps in program, -1 infinite loop that is ended by user 
+Inline 1 ## number of Execute steps in program, -1 infinite loop that is ended by user 
 Interactive 0 ## set to 1 if you want to run the code interactively
 

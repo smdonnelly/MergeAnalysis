@@ -36,6 +36,7 @@ class LAPPDCalibrationWriter: public Tool {
   void HandEntry();
   void DefaultSimple();
   void FTBFPionRun();
+  vector<double> ParseAsciiCharges(string infilename);
 
 
  private:
@@ -68,6 +69,8 @@ class LAPPDCalibrationWriter: public Tool {
  //calibrating these quantities gives an extra 10ps or so
  //timing resolution of electronics
  vector<double> _sample_times; 
+ vector<double> _laser_on_charges; //spe signal spectrum
+ vector<double> _laser_off_charges; //spe background spectrum 
  
 
 
