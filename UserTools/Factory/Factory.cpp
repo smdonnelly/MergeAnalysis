@@ -87,6 +87,7 @@ if (tool=="LoadGeometry") ret=new LoadGeometry;
 if (tool=="LoadFTBFgeometry") ret=new LoadFTBFgeometry;
 if (tool=="LAPPDCalibrationWriter") ret=new LAPPDCalibrationWriter;
 if (tool=="FTBFAnalysis") ret=new FTBFAnalysis;
+if (tool=="LoadRATPAC") ret=new LoadRATPAC;
 if (tool=="TimeClustering") ret=new TimeClustering;
 if (tool=="GracefulStop") ret=new GracefulStop;
 if (tool=="PhaseIIADCHitFinder") ret=new PhaseIIADCHitFinder;
@@ -98,5 +99,8 @@ if (tool=="MonitorTankTime") ret=new MonitorTankTime;
 if (tool=="PhaseIIADCCalibrator") ret=new PhaseIIADCCalibrator;
 if (tool=="MCHitToHitComparer") ret=new MCHitToHitComparer;
 if (tool=="EstimateNPE") ret=new EstimateNPE;
+if (tool=="ClusterTree") ret=new ClusterTree;
+if (tool=="ClusterDummy") ret=new ClusterDummy;
+if (tool=="LAPPDCluster") ret=new LAPPDCluster;
 return ret;
 }

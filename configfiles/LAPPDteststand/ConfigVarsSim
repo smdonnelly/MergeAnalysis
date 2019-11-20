@@ -1,0 +1,11 @@
+#GenerateHits
+nhits 4
+PathToPulsecharacteristics ./UserTools/LAPPDSim/pulsecharacteristics.root
+ArtificialEvent 0
+EventDisplay 0
+OutputFile testtestestest
+# in units of meters
+paracoord -0.001
+perpcoord 0.0
+randomizepositions 0
+trigtime 5.0

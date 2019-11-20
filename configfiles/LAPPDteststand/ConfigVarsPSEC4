@@ -25,7 +25,8 @@ IntegLow  64000
 IntegHi 67000
 
 #LAPPDFindPeak
-PeakInputWavLabel FiltLAPPDData
+#PeakInputWavLabel FiltLAPPDData
+PeakInputWavLabel LAPPDWaveforms
 TotThreshold 0.5
 MinimumTot 2000.
 Deltat 100.

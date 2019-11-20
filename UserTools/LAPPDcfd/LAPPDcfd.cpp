@@ -15,6 +15,8 @@ bool LAPPDcfd::Initialise(std::string configfile, DataModel &data){
   TString CIWL;
   m_variables.Get("CFDInputWavLabel",CIWL);
   CFDInputWavLabel = CIWL;
+  cout<<"INITIALIZING CFD "<<CFDInputWavLabel<<endl;
+
   // Get the CFD threshold from the config file
   m_variables.Get("Fraction_CFD", Fraction_CFD);
   //std::cout<<"Fraction_CFD="<<Fraction_CFD<<std::endl;
@@ -31,13 +33,20 @@ bool LAPPDcfd::Execute(){
 
   Waveform<double> bwav;
 
+  cout<<"in execute "<<CFDInputWavLabel<<endl;
+
   // get raw lappd data from the Boost Store
-  std::map<int,vector<Waveform<double>>> rawlappddata;
+  std::map<unsigned long,vector<Waveform<double>>> rawlappddata;
   bool testval =  m_data->Stores["ANNIEEvent"]->Get(CFDInputWavLabel,rawlappddata);
 
+  cout<<"here 0"<<endl;
+
   // get first-level pulse reco from the Boost Store
-  std::map<int,vector<LAPPDPulse>> SimpleRecoLAPPDPulses;
+  std::map<unsigned long,vector<LAPPDPulse>> SimpleRecoLAPPDPulses;
   m_data->Stores["ANNIEEvent"]->Get("SimpleRecoLAPPDPulses",SimpleRecoLAPPDPulses);
+
+  cout<<"here 1"<<endl;
+
 
   // get the sim-level information
 
@@ -46,11 +55,13 @@ bool LAPPDcfd::Execute(){
     m_data->Stores["ANNIEEvent"]->Get("MCLAPPDHit",lappdmchits);
   }
 
+  cout<<"here now"<<endl;
+
   // Place to store the reconstructed pulses
-  std::map<int,vector<LAPPDPulse>> CFDRecoLAPPDPulses;
+  std::map<unsigned long,vector<LAPPDPulse>> CFDRecoLAPPDPulses;
 
   // Loop over all channels
-  map <int, vector<Waveform<double>>> :: iterator itr;
+  map <unsigned long, vector<Waveform<double>>> :: iterator itr;
   for (itr = rawlappddata.begin(); itr != rawlappddata.end(); ++itr){
 
     // Get the channel number and a vector of Waveforms
@@ -58,7 +69,7 @@ bool LAPPDcfd::Execute(){
     vector<Waveform<double>> Vwavs = itr->second;
 
     // get the vector of pulses correseponding to the channel
-    map<int, vector<LAPPDPulse>>::iterator p;
+    map<unsigned long, vector<LAPPDPulse>>::iterator p;
     p = SimpleRecoLAPPDPulses.find(channelno);
     vector<LAPPDPulse> Vpulses = p->second;
 
