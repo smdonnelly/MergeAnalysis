@@ -18,7 +18,9 @@ bool LAPPDFindPeak::Initialise(std::string configfile, DataModel &data){
   m_variables.Get("TotThreshold", TotThreshold);
   m_variables.Get("MinimumTot", MinimumTot);
   m_variables.Get("Deltat", Deltat);
-
+  TString storename_;
+  m_variables.Get("store_name", storename_);
+  storename = storename_;
   return true;
 }
 
@@ -30,13 +32,14 @@ bool LAPPDFindPeak::Execute(){
   //m_data->Stores["ANNIEEvent"]->Print();
   //bool testval =  m_data->Stores["ANNIEEvent"]->Get("LAPPDtrace",bwav);
 
-  //std::cout<<"In Peak Finding Tool..............................."<<std::endl;
+  std::cout<<"In Peak Finding Tool..............................."<<std::endl;
 
   // get raw lappd data
   std::map<unsigned long,vector<Waveform<double>>> rawlappddata;
-  m_data->Stores["ANNIEEvent"]->Get(PeakInputWavLabel,rawlappddata);
+  cout<<"derp   "<<PeakInputWavLabel<<endl;
+  m_data->Stores[storename]->Get(PeakInputWavLabel,rawlappddata);
   //bool testval =  m_data->Stores["ANNIEEvent"]->Get("RawLAPPDData",rawlappddata);
-  //cout<<PeakInputWavLabel<<" "<<rawlappddata.size()<<endl;
+  cout<<PeakInputWavLabel<<" "<<rawlappddata.size()<<endl;
 
   // make reconstructed pulses
   std::map<unsigned long,vector<LAPPDPulse>> SimpleRecoLAPPDPulses;
@@ -71,7 +74,7 @@ bool LAPPDFindPeak::Execute(){
       }       
   }
 
-  m_data->Stores["ANNIEEvent"]->Set("SimpleRecoLAPPDPulses",SimpleRecoLAPPDPulses);
+  m_data->Stores[storename]->Set("SimpleRecoLAPPDPulses",SimpleRecoLAPPDPulses);
 
   //std::cout<<"Done Finding Peaks..............................."<<std::endl;
   //std::cout<<" "<<std::endl;

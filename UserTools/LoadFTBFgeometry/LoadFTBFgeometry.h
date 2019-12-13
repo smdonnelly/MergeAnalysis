@@ -42,7 +42,7 @@ class LoadFTBFgeometry: public Tool {
 
 	TString calibfilename;
 	
-
+	string storename;
 
 
 };

@@ -33,10 +33,10 @@ class LAPPDCluster: public Tool {
 
  private:
 
-Geometry* _geom;
-
-
-
+  Geometry* _geom;
+  string ClusterLabel;
+  string GeometryLabel;
+  string storename;
 };
 
 

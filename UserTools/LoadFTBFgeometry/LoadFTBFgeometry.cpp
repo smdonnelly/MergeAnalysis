@@ -18,8 +18,10 @@ bool LoadFTBFgeometry::Initialise(std::string configfile, DataModel &data){
  get_ok = m_variables.Get("verbose", verbosity);
 
 
+ m_variables.Get("store_name", storename);
  //create a store for the FTBF data
- m_data->Stores["FTBFEvent"]=new BoostStore(false,2);
+ cout<<storename<<endl;
+ m_data->Stores[storename]=new BoostStore(false,2);
 
   
   get_ok = m_variables.Get("ChannelConfigFile", calibfilename);
@@ -96,7 +98,7 @@ bool LoadFTBFgeometry::Execute(){
 		cout<<"constructed ftbf geometry with info:"<< endl; 
 		ftbfgeom->Print();
 	}
-	m_data->Stores.at("FTBFEvent")->Header->Set("FTBFGeometry",ftbfgeom,true);
+	m_data->Stores.at(storename)->Header->Set("FTBFGeometry",ftbfgeom,true);
 	
 	
 	// Construct the Detectors and Channels
@@ -237,10 +239,17 @@ bool LoadFTBFgeometry::Execute(){
   	acdc_calib_reader.CloseRootFile();
 
   // for other WCSim tools that may need the WCSim Tube IDs
-	m_data->Stores.at("FTBFEvent")->Header->Set("lappd_tubeid_to_detectorkey",lappd_tubeid_to_detectorkey);
+	m_data->Stores.at(storename)->Header->Set("lappd_tubeid_to_detectorkey",lappd_tubeid_to_detectorkey);
 	// inverse
-	m_data->Stores.at("FTBFEvent")->Header->Set("detectorkey_to_lappdid",detectorkey_to_lappdid);
-	m_data->Stores.at("FTBFEvent")->Set("sample_time_map", sample_time_map);
+	m_data->Stores.at(storename)->Header->Set("detectorkey_to_lappdid",detectorkey_to_lappdid);
+	m_data->Stores.at(storename)->Set("sample_time_map", sample_time_map);
+
+	//demonstration that ftbfgeom can use the geometry functions for channelkeys
+	//	Channel* mychannel = ftbfgeom->GetChannel(60);
+	//cout<<"my channel's id " <<mychannel->GetChannelID()<<endl;
+
+	
+
 
 	
   return true;

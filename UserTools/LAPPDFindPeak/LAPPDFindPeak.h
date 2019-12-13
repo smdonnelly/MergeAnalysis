@@ -28,7 +28,7 @@ class LAPPDFindPeak: public Tool {
   double TotThreshold;
   double MinimumTot;
   double Deltat;
-
+  string storename;
 
 
 };

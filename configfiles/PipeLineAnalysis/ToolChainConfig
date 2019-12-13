@@ -1,0 +1,96 @@
+# General Parameters
+Nsamples 256
+SampleSize 100
+NChannels 60
+TrigChannel -1
+
+#LAPPDBaselineSubtract
+LowBLfitrange 40000;
+HiBLfitrange  60000;
+
+# LAPPDSim
+SimInput  ./UserTools/LAPPDSim/pulsecharacteristics.root
+
+# LAPPDParseScope
+FileInput ../LAPPDdata_fff/LAPPD25_3.22.18/2400_2100_1300_bsln_2sided_root.fff
+
+#LAPPDFilter
+FilterInputWavLabel RawLAPPDData
+#FilterInputWavLabel BLsubtractedLAPPDData
+doFilter false
+CutoffFrequency 500000000
+
+#LAPPDIntegratePulse
+IntegLow  64000
+IntegHi 67000
+
+#LAPPDFindPeak
+#PeakInputWavLabel FiltLAPPDData
+PeakInputWavLabel LAPPDWaveforms
+TotThreshold 0.5
+MinimumTot 2000.
+Deltat 100.
+
+# LAPPDcfd
+CFDInputWavLabel LAPPDWaveforms
+Fraction_CFD 0.4
+
+# LAPPDSave
+path ./testoutput
+
+# LAPPDSaveROOT
+outfile ../LAPPDoutputs/SimTest.root
+#outfile ./testout.root
+NHistos 100
+
+
+# LAPPDCluster
+ClusterLabel SimpleRecoLAPPDPulses
+GeometryLabel FTBFGeometry
+store_name ANNIEEvent
+
+#LoadFTBFGeometry configs
+ChannelConfigFile configfiles/FTBFanalysis/pion_run.root
+
+#LAPPDParseACC configs
+lappd_data_filepath ../data
+lappd_data_filename test_chain
+geometry_name FTBFGeometry
+store_name ANNIEEvent
+
+#LAPPDIntegratePulse configs
+integration_type nnls #currently can be nnls or ranged where ranged is a constant time-range integration on raw data from ANNIEEvent store and nnls uses info from "store_name" above and gets nnlssolutions
+termination 50
+#these are unused at the moment
+Nsamples 256
+SampleSize 97
+IntegLow 10000
+IntegHi 15000
+
+
+#EstimateNPE, reference arXiv: 1602.03150v2 "Saldanha"
+background_f 0.4 #fraction of background trigger events below an upperbound charge cut for defining 0-pe. must be < 1
+
+##### Runtime Paramiters #####
+verbose 3 ## Verbosity level of ToolChain
+error_level 0 # 0= do not exit, 1= exit on unhandeled errors only, 2= exit on unhandeled errors and handeled errors
+attempt_recover 1 ## 1= will attempt to finalise if an execute fails
+remote_port 24002
+IO_Threads 1 ## Number of threads for network traffic (~ 1/Gbps)
+
+###### Logging #####
+log_mode Interactive # Interactive=cout , Remote= remote logging system "serservice_name Remote_Logging" , Local = local file log;
+log_local_path ./log
+log_service LogStore
+
+
+###### Service discovery ##### Ignore these settings for local analysis
+service_publish_sec -1
+service_kick_sec -1
+
+##### Tools To Add #####
+Tools_File configfiles/PipeLineAnalysis/ToolsConfig  ## list of tools to run and their config files
+
+##### Run Type #####
+Inline 1 ## number of Execute steps in program, -1 infinite loop that is ended by user
+Interactive 0 ## set to 1 if you want to run the code interactively

@@ -4,4 +4,4 @@ lappd_baseline_subtract LAPPDBaselineSubtract configfiles/FTBFanalysis/ToolChain
 waveform_nnls WaveformNNLS configfiles/FTBFanalysis/ToolChainConfig
 integrate_pulse LAPPDIntegratePulse configfiles/FTBFanalysis/ToolChainConfig
 estimate_pe EstimateNPE configfiles/FTBFanalysis/ToolChainConfig
-FTBFAnalysis FTBFAnalysis configfiles/FTBFanalysis/ToolChainConfig
+#FTBFAnalysis FTBFAnalysis configfiles/FTBFanalysis/ToolChainConfig

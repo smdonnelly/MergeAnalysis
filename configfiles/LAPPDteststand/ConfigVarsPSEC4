@@ -32,7 +32,7 @@ MinimumTot 2000.
 Deltat 100.
 
 # LAPPDcfd
-CFDInputWavLabel FiltLAPPDData
+CFDInputWavLabel LAPPDWaveforms
 Fraction_CFD 0.4
 
 # LAPPDSave
@@ -42,3 +42,10 @@ path ./testoutput
 outfile ../LAPPDoutputs/SimTest.root
 #outfile ./testout.root
 NHistos 100
+
+
+# LAPPDCluster
+ClusterLabel SimpleRecoLAPPDPulses
+geom_name FTBFGeometry
+store_name ANNIEEvent
+

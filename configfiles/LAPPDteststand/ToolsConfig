@@ -1,6 +1,9 @@
-LoadGeometry LoadGeometry configfiles/LoadGeometry/LoadGeometryConfig
-GenerateHits GenerateHits configfiles/LAPPDteststand/ConfigVarsSim
-LAPPDSim  LAPPDSim configfiles/LAPPDteststand/ConfigVarsSim
+#LoadGeometry LoadGeometry configfiles/LoadGeometry/LoadGeometryConfig
+#GenerateHits GenerateHits configfiles/LAPPDteststand/ConfigVarsSim
+#LAPPDSim  LAPPDSim configfiles/LAPPDteststand/ConfigVarsSim
+LoadFTBFgeometry LoadFTBFgeometry configfiles/FTBFanalysis/ToolChainConfig
+lappd_parse_acc LAPPDParseACC configfiles/FTBFanalysis/ToolChainConfig
+#lappd_baseline_subtract LAPPDBaselineSubtract configfiles/FTBFanalysis/ToolChainConfig
 LAPPDFindPeak LAPPDFindPeak configfiles/LAPPDteststand/ConfigVarsPSEC4
 LAPPDCluster LAPPDCluster configfiles/LAPPDteststand/ConfigVarsPSEC4
 #ClusterDummy ClusterDummy configfiles/LAPPDteststand/ConfigVarsPSEC4

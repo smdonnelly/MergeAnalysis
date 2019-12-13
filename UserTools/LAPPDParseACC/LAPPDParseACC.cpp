@@ -78,11 +78,12 @@ bool LAPPDParseACC::Execute(){
   string storename; 
   m_variables.Get("store_name", storename);
   bool geomfound;
+  cout<<"Parse Store name "<<storename<< " Parse geometry name "<<geoname<<endl;
   Geometry* geom;
   geomfound = m_data->Stores.at(storename)->Header->Get(geoname,geom);
   if(!geomfound)
   {
-    cout << "Geometry " << geoname << " in store " << storename << " was not found while attempting to prase ACDC data" << endl;
+    cout << "Geometry " << geoname << " in store " << storename << " was not found while attempting to parse ACDC data" << endl;
     return false;
   }
 
@@ -97,7 +98,8 @@ bool LAPPDParseACC::Execute(){
   m_data->Stores.at(storename)->Set("AllLAPPDChannels", all_lappd_channels);
 
   //create raw lappd data structure
-  map<unsigned long, Waveform<double>>* LAPPDWaveforms = new map<unsigned long, Waveform<double>>;
+  map<unsigned long, vector<Waveform<double>>>* LAPPDWaveforms = new map<unsigned long, vector<Waveform<double>>>;
+  //  map<unsigned long, Waveform<double>>* LAPPDWaveforms = new map<unsigned long, Waveform<double>>;
 
 
   int bo = 0, ch = 0; //event board and channel parsing vars
@@ -178,9 +180,12 @@ bool LAPPDParseACC::Execute(){
     if(!keyfound) continue;
 
     //otherwise, add this waveform to the raw lappd waveform
-    //structure. 
-    LAPPDWaveforms->insert(pair<unsigned int, Waveform<double>>(geom_key, tempwav));
-
+    //structure.
+    vector<Waveform<double>> vtempwav;
+    vtempwav.push_back(tempwav);
+    LAPPDWaveforms->insert(pair<unsigned long, vector<Waveform<double>>>(geom_key, vtempwav));
+    //LAPPDWaveforms->insert(pair<unsigned int, Waveform<double>>(geom_key, tempwav));
+    // cout<<LAPPDWaveforms->size()<<" "<<vtempwav.size()<<endl;
     //reinitialize
     tempwav.ClearSamples();
     line_counter++;
